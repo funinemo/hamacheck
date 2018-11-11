@@ -13,13 +13,13 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-type ConfigData struct {
+type configData struct {
 	LoginEmail    string
 	LoginPassword string
 	LoginURL      string
 }
 
-var cd ConfigData
+var cd configData
 
 // ログイン前のサイト内にtokenが入っているので、htmlを取得。
 // サイト内の構造を取り出して<input>内からtokenを取得
@@ -54,6 +54,46 @@ func printResponse(r *http.Response) {
 	d, _ := httputil.DumpResponse(r, true)
 	fmt.Printf("===Dump Response[START]\n%s\n===Dump Response[END]\n", d)
 }
+func searchShop(c *http.Client) {
+	url := "https://my.hamazushi.com/shop/search/"
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, err := c.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	doc.Find("a").Each(func(i int, s *goquery.Selection) {
+		kenURL, _ := s.Attr("href")
+		kenName := s.Text()
+		if len(kenURL) > 21 && kenURL[:21] == "/shop/search/extract/" {
+			fmt.Printf("data = %s,%s\n", kenURL, kenName)
+			searchShop2(c, kenURL)
+		}
+	})
+}
+func searchShop2(c *http.Client, url string) {
+	req, _ := http.NewRequest("GET", "https://my.hamazushi.com"+url, nil)
+	resp, err := c.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	printResponse(resp)
+}
+func getWaitNumber(c *http.Client) {
+	url := "https://my.hamazushi.com/shop/?shopId=10121"
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, err := c.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+}
 func main() {
 	// コンフィグファイルを読み込む
 	f, err := ioutil.ReadFile("./config.json")
@@ -61,7 +101,6 @@ func main() {
 		log.Fatal(err)
 	}
 	json.Unmarshal(f, &cd)
-
 	cookieJar, _ := cookiejar.New(nil)
 	client := &http.Client{
 		Jar: cookieJar,
@@ -79,21 +118,14 @@ func main() {
 
 	// このヘッダは必要。
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	//	printRequest(req)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	//	printResponse(resp)
 
+	// 店舗情報を取得
+	searchShop(client)
 	// 3度目のリクエスト、ログイン済みなので、取れる情報が変わる。
-	url := "https://my.hamazushi.com/shop/?shopId=10121"
-	req, _ = http.NewRequest("GET", url, nil)
-	resp, err = client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
+	//	getWaitNumber(client)
 }

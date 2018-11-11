@@ -54,6 +54,8 @@ func printResponse(r *http.Response) {
 	d, _ := httputil.DumpResponse(r, true)
 	fmt.Printf("===Dump Response[START]\n%s\n===Dump Response[END]\n", d)
 }
+
+// 県単位での取得
 func searchShop(c *http.Client) {
 	url := "https://my.hamazushi.com/shop/search/"
 	req, _ := http.NewRequest("GET", url, nil)
@@ -66,6 +68,7 @@ func searchShop(c *http.Client) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	//構造変わったら取れなくなる
 	doc.Find("a").Each(func(i int, s *goquery.Selection) {
 		kenURL, _ := s.Attr("href")
 		kenName := s.Text()
@@ -75,6 +78,8 @@ func searchShop(c *http.Client) {
 		}
 	})
 }
+
+//県内の各店舗を取得
 func searchShop2(c *http.Client, url string) {
 	req, _ := http.NewRequest("GET", "https://my.hamazushi.com"+url, nil)
 	resp, err := c.Do(req)
@@ -86,23 +91,31 @@ func searchShop2(c *http.Client, url string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// 構造変わったら取れなくなる
 	doc.Find("a").Each(func(i int, s *goquery.Selection) {
 		kenURL, _ := s.Attr("href")
-		kenName := s.Text()
 		if len(kenURL) > 20 && kenURL[:20] == "/shop/search/result/" {
-			fmt.Printf("data = %s,%s\n", kenURL, kenName)
+			getWaitNumber(c, kenURL)
 		}
 	})
 }
-func getWaitNumber(c *http.Client) {
-	url := "https://my.hamazushi.com/shop/?shopId=10121"
-	req, _ := http.NewRequest("GET", url, nil)
+
+//店舗毎の情報を取得
+func getWaitNumber(c *http.Client, url string) {
+	req, _ := http.NewRequest("GET", "https://my.hamazushi.com"+url, nil)
 	resp, err := c.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// 構造変わったら取れなくなる
+	doc.Find("section > ul > li > a").Each(func(i int, s *goquery.Selection) {
+		fmt.Printf("data:%s,%s\n", s.Find("p").Text(), s.Find("dd").Text())
+	})
 }
 func main() {
 	// コンフィグファイルを読み込む
@@ -134,8 +147,7 @@ func main() {
 	}
 	defer resp.Body.Close()
 
+	// 3度目のリクエスト、ログイン済みなので、取れる情報が変わる。
 	// 店舗情報を取得
 	searchShop(client)
-	// 3度目のリクエスト、ログイン済みなので、取れる情報が変わる。
-	//	getWaitNumber(client)
 }

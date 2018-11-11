@@ -79,13 +79,13 @@ func main() {
 
 	// このヘッダは必要。
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	printRequest(req)
+	//	printRequest(req)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	printResponse(resp)
+	//	printResponse(resp)
 
 	// 3度目のリクエスト、ログイン済みなので、取れる情報が変わる。
 	url := "https://my.hamazushi.com/shop/?shopId=10121"

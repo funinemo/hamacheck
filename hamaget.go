@@ -82,7 +82,17 @@ func searchShop2(c *http.Client, url string) {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	printResponse(resp)
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	doc.Find("a").Each(func(i int, s *goquery.Selection) {
+		kenURL, _ := s.Attr("href")
+		kenName := s.Text()
+		if len(kenURL) > 20 && kenURL[:20] == "/shop/search/result/" {
+			fmt.Printf("data = %s,%s\n", kenURL, kenName)
+		}
+	})
 }
 func getWaitNumber(c *http.Client) {
 	url := "https://my.hamazushi.com/shop/?shopId=10121"
